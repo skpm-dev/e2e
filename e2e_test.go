@@ -121,15 +121,19 @@ func waitForFileGone(path string, timeout time.Duration) error {
 	return fmt.Errorf("file %q still exists after %s", path, timeout)
 }
 
-// TestInstall installs test-economy and verifies the script file and lockfile.
+const testPkg = "e2e-test"
+
+// TestInstall installs the e2e-test package and verifies the script file and lockfile.
 func TestInstall(t *testing.T) {
 	conn := connect(t)
 
-	if _, err := conn.Execute("skpm install test-economy"); err != nil {
+	t.Logf("→ skpm install %s", testPkg)
+	if _, err := conn.Execute("skpm install " + testPkg); err != nil {
 		t.Fatalf("install command: %v", err)
 	}
 
-	scriptPath := filepath.Join(serverDir, "plugins/Skript/scripts/skpm/test-economy/economy.sk")
+	scriptPath := filepath.Join(serverDir, "plugins/Skript/scripts/skpm/"+testPkg+"/hello.sk")
+	t.Logf("→ waiting for %s", scriptPath)
 	if err := waitForFile(scriptPath, 30*time.Second); err != nil {
 		t.Fatal(err)
 	}
@@ -139,20 +143,21 @@ func TestInstall(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read lockfile: %v", err)
 	}
-	if !strings.Contains(string(lock), "test-economy") {
-		t.Fatalf("lockfile missing test-economy entry:\n%s", lock)
+	t.Logf("lockfile:\n%s", lock)
+	if !strings.Contains(string(lock), testPkg) {
+		t.Fatalf("lockfile missing %q entry", testPkg)
 	}
 }
 
-// TestRemove removes test-economy and verifies cleanup.
+// TestRemove removes the e2e-test package and verifies cleanup.
 func TestRemove(t *testing.T) {
 	conn := connect(t)
 
-	scriptPath := filepath.Join(serverDir, "plugins/Skript/scripts/skpm/test-economy/economy.sk")
+	scriptPath := filepath.Join(serverDir, "plugins/Skript/scripts/skpm/"+testPkg+"/hello.sk")
 
-	// Ensure installed first
 	if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
-		if _, err := conn.Execute("skpm install test-economy"); err != nil {
+		t.Logf("→ skpm install %s (pre-condition)", testPkg)
+		if _, err := conn.Execute("skpm install " + testPkg); err != nil {
 			t.Fatalf("install command: %v", err)
 		}
 		if err := waitForFile(scriptPath, 30*time.Second); err != nil {
@@ -160,7 +165,8 @@ func TestRemove(t *testing.T) {
 		}
 	}
 
-	if _, err := conn.Execute("skpm remove test-economy"); err != nil {
+	t.Logf("→ skpm remove %s", testPkg)
+	if _, err := conn.Execute("skpm remove " + testPkg); err != nil {
 		t.Fatalf("remove command: %v", err)
 	}
 
@@ -173,8 +179,9 @@ func TestRemove(t *testing.T) {
 	if err != nil && !os.IsNotExist(err) {
 		t.Fatalf("read lockfile: %v", err)
 	}
-	if strings.Contains(string(lock), "test-economy") {
-		t.Fatalf("lockfile still contains test-economy after remove:\n%s", lock)
+	t.Logf("lockfile:\n%s", lock)
+	if strings.Contains(string(lock), testPkg) {
+		t.Fatalf("lockfile still contains %q after remove", testPkg)
 	}
 }
 
