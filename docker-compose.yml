@@ -1,0 +1,17 @@
+services:
+  minecraft:
+    image: itzg/minecraft-server:latest
+    environment:
+      EULA: "TRUE"
+      TYPE: PAPER
+      VERSION: "1.21.4"
+      ENABLE_RCON: "true"
+      RCON_PASSWORD: "skpmtest"
+      RCON_PORT: "25575"
+      ONLINE_MODE: "false"
+      MEMORY: "1G"
+      USE_AIKAR_FLAGS: "true"
+    ports:
+      - "25575:25575"
+    volumes:
+      - ./server-data:/data

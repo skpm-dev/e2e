@@ -1,0 +1,21 @@
+name: E2E
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [run-e2e]
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Run e2e tests
+        run: go test -v -timeout 10m ./...
