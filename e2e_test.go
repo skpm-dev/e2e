@@ -121,6 +121,23 @@ func waitForFileGone(path string, timeout time.Duration) error {
 	return fmt.Errorf("file %q still exists after %s", path, timeout)
 }
 
+// ensureInstalled installs testPkg if it is not already on disk, waiting for
+// the script file to appear before returning.
+func ensureInstalled(t *testing.T, conn *rcon.Conn) {
+	t.Helper()
+	scriptPath := filepath.Join(serverDir, "plugins/Skript/scripts/skpm/"+testPkg+"/hello.sk")
+	if _, err := os.Stat(scriptPath); err == nil {
+		return // already installed
+	}
+	t.Logf("→ skpm install %s (pre-condition)", testPkg)
+	if _, err := conn.Execute("skpm install " + testPkg); err != nil {
+		t.Fatalf("install command: %v", err)
+	}
+	if err := waitForFile(scriptPath, 30*time.Second); err != nil {
+		t.Fatalf("pre-condition install: %v", err)
+	}
+}
+
 const testPkg = "e2e-test"
 
 // TestInstall installs the e2e-test package and verifies the script file and lockfile.
@@ -149,24 +166,58 @@ func TestInstall(t *testing.T) {
 	}
 }
 
-// TestRemove removes the e2e-test package and verifies cleanup.
-func TestRemove(t *testing.T) {
+// TestAlreadyInstalled verifies that installing an already-installed package
+// returns a helpful message and does not re-download anything.
+func TestAlreadyInstalled(t *testing.T) {
 	conn := connect(t)
+	ensureInstalled(t, conn)
+
+	t.Logf("→ skpm install %s (already installed)", testPkg)
+	resp, err := conn.Execute("skpm install " + testPkg)
+	if err != nil {
+		t.Fatalf("install command: %v", err)
+	}
+	t.Logf("response: %q", resp)
+
+	if !strings.Contains(resp, "already installed") {
+		t.Errorf("expected 'already installed' in response, got: %q", resp)
+	}
+}
+
+// TestRemoveRequiresConfirm verifies that remove without --confirm prints a
+// warning and leaves the package in place.
+func TestRemoveRequiresConfirm(t *testing.T) {
+	conn := connect(t)
+	ensureInstalled(t, conn)
 
 	scriptPath := filepath.Join(serverDir, "plugins/Skript/scripts/skpm/"+testPkg+"/hello.sk")
 
-	if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
-		t.Logf("→ skpm install %s (pre-condition)", testPkg)
-		if _, err := conn.Execute("skpm install " + testPkg); err != nil {
-			t.Fatalf("install command: %v", err)
-		}
-		if err := waitForFile(scriptPath, 30*time.Second); err != nil {
-			t.Fatalf("pre-condition: %v", err)
-		}
+	t.Logf("→ skpm remove %s (no --confirm)", testPkg)
+	resp, err := conn.Execute("skpm remove " + testPkg)
+	if err != nil {
+		t.Fatalf("remove command: %v", err)
+	}
+	t.Logf("response: %q", resp)
+
+	if !strings.Contains(resp, "--confirm") {
+		t.Errorf("expected --confirm prompt in response, got: %q", resp)
 	}
 
-	t.Logf("→ skpm remove %s", testPkg)
-	if _, err := conn.Execute("skpm remove " + testPkg); err != nil {
+	// File must still be present — the package must not have been removed.
+	if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
+		t.Fatal("package was removed without --confirm flag")
+	}
+}
+
+// TestRemove removes the e2e-test package and verifies cleanup.
+func TestRemove(t *testing.T) {
+	conn := connect(t)
+	ensureInstalled(t, conn)
+
+	scriptPath := filepath.Join(serverDir, "plugins/Skript/scripts/skpm/"+testPkg+"/hello.sk")
+
+	t.Logf("→ skpm remove %s --confirm", testPkg)
+	if _, err := conn.Execute("skpm remove " + testPkg + " --confirm"); err != nil {
 		t.Fatalf("remove command: %v", err)
 	}
 
