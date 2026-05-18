@@ -52,11 +52,16 @@ func setup() error {
 		return fmt.Errorf("create plugins dir: %w", err)
 	}
 
-	fmt.Println("→ [setup] Downloading SKPM.jar from latest GitHub release...")
-	if err := downloadLatestJAR("skpm-dev", "plugin", filepath.Join(pluginsDir, "SKPM.jar")); err != nil {
-		return fmt.Errorf("download SKPM: %w", err)
+	skpmJAR := filepath.Join(pluginsDir, "SKPM.jar")
+	if _, err := os.Stat(skpmJAR); os.IsNotExist(err) {
+		fmt.Println("→ [setup] Downloading SKPM.jar from latest GitHub release...")
+		if err := downloadLatestJAR("skpm-dev", "plugin", skpmJAR); err != nil {
+			return fmt.Errorf("download SKPM: %w", err)
+		}
+		fmt.Println("  ✓ SKPM.jar downloaded")
+	} else {
+		fmt.Println("→ [setup] SKPM.jar already present (placed by CI workflow step)")
 	}
-	fmt.Println("  ✓ SKPM.jar downloaded")
 
 	fmt.Println("→ [setup] Downloading Skript.jar from latest GitHub release...")
 	if err := downloadLatestJAR("SkriptLang", "Skript", filepath.Join(pluginsDir, "Skript.jar")); err != nil {

@@ -13,91 +13,45 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/checkout@v4
+        with:
+          repository: skpm-dev/cli
+          token: ${{ secrets.REGISTRY_GITHUB_TOKEN }}
+          path: ../cli
+
+      - uses: actions/checkout@v4
+        with:
+          repository: skpm-dev/registry
+          token: ${{ secrets.REGISTRY_GITHUB_TOKEN }}
+          path: ../registry
+
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
 
-      - name: TestInstall
-        run: go test -v -timeout 5m ./... -run ^TestInstall$
+      - name: Download SKPM.jar from plugin CI
+        run: |
+          mkdir -p server-data/plugins
+          RUN_ID="${{ github.event.client_payload.plugin_run_id }}"
+          if [ -n "$RUN_ID" ]; then
+            echo "Downloading SKPM.jar from plugin run $RUN_ID"
+            gh run download "$RUN_ID" --repo skpm-dev/plugin --name SKPM --dir server-data/plugins
+          else
+            echo "No plugin_run_id in payload — fetching from latest successful CI run on main"
+            LATEST=$(gh run list --repo skpm-dev/plugin --branch main --status success --workflow ci.yml --limit 1 --json databaseId --jq '.[0].databaseId')
+            if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
+              echo "No artifact found — Go test will fall back to latest GitHub release"
+            else
+              echo "Downloading SKPM.jar from run $LATEST"
+              gh run download "$LATEST" --repo skpm-dev/plugin --name SKPM --dir server-data/plugins
+            fi
+          fi
         env:
-          SKPM_GITHUB_TOKEN: ${{ secrets.SKPM_GITHUB_TOKEN }}
-          REGISTRY_GITHUB_TOKEN: ${{ secrets.REGISTRY_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.REGISTRY_GITHUB_TOKEN }}
 
-      - name: TestAlreadyInstalled
-        run: go test -v -timeout 5m ./... -run ^TestAlreadyInstalled$
-        env:
-          SKPM_GITHUB_TOKEN: ${{ secrets.SKPM_GITHUB_TOKEN }}
-          REGISTRY_GITHUB_TOKEN: ${{ secrets.REGISTRY_GITHUB_TOKEN }}
-
-      - name: TestRemoveRequiresConfirm
-        run: go test -v -timeout 5m ./... -run ^TestRemoveRequiresConfirm$
-        env:
-          SKPM_GITHUB_TOKEN: ${{ secrets.SKPM_GITHUB_TOKEN }}
-          REGISTRY_GITHUB_TOKEN: ${{ secrets.REGISTRY_GITHUB_TOKEN }}
-
-      - name: TestRemove
-        run: go test -v -timeout 5m ./... -run ^TestRemove$
-        env:
-          SKPM_GITHUB_TOKEN: ${{ secrets.SKPM_GITHUB_TOKEN }}
-          REGISTRY_GITHUB_TOKEN: ${{ secrets.REGISTRY_GITHUB_TOKEN }}
-
-      - name: TestList
-        run: go test -v -timeout 5m ./... -run ^TestList$
-        env:
-          SKPM_GITHUB_TOKEN: ${{ secrets.SKPM_GITHUB_TOKEN }}
-          REGISTRY_GITHUB_TOKEN: ${{ secrets.REGISTRY_GITHUB_TOKEN }}
-
-      - name: TestInfo
-        run: go test -v -timeout 5m ./... -run ^TestInfo$
-        env:
-          SKPM_GITHUB_TOKEN: ${{ secrets.SKPM_GITHUB_TOKEN }}
-          REGISTRY_GITHUB_TOKEN: ${{ secrets.REGISTRY_GITHUB_TOKEN }}
-
-      - name: TestSearch
-        run: go test -v -timeout 5m ./... -run ^TestSearch$
-        env:
-          SKPM_GITHUB_TOKEN: ${{ secrets.SKPM_GITHUB_TOKEN }}
-          REGISTRY_GITHUB_TOKEN: ${{ secrets.REGISTRY_GITHUB_TOKEN }}
-
-      - name: TestInstallNotFound
-        run: go test -v -timeout 5m ./... -run ^TestInstallNotFound$
-        env:
-          SKPM_GITHUB_TOKEN: ${{ secrets.SKPM_GITHUB_TOKEN }}
-          REGISTRY_GITHUB_TOKEN: ${{ secrets.REGISTRY_GITHUB_TOKEN }}
-
-      - name: TestRemoveNotInstalled
-        run: go test -v -timeout 5m ./... -run ^TestRemoveNotInstalled$
-        env:
-          SKPM_GITHUB_TOKEN: ${{ secrets.SKPM_GITHUB_TOKEN }}
-          REGISTRY_GITHUB_TOKEN: ${{ secrets.REGISTRY_GITHUB_TOKEN }}
-
-      - name: TestUpdateAlreadyLatest
-        run: go test -v -timeout 5m ./... -run ^TestUpdateAlreadyLatest$
-        env:
-          SKPM_GITHUB_TOKEN: ${{ secrets.SKPM_GITHUB_TOKEN }}
-          REGISTRY_GITHUB_TOKEN: ${{ secrets.REGISTRY_GITHUB_TOKEN }}
-
-      - name: TestUpdate
-        run: go test -v -timeout 5m ./... -run ^TestUpdate$
-        env:
-          SKPM_GITHUB_TOKEN: ${{ secrets.SKPM_GITHUB_TOKEN }}
-          REGISTRY_GITHUB_TOKEN: ${{ secrets.REGISTRY_GITHUB_TOKEN }}
-
-      - name: TestUpdateAll
-        run: go test -v -timeout 5m ./... -run ^TestUpdateAll$
-        env:
-          SKPM_GITHUB_TOKEN: ${{ secrets.SKPM_GITHUB_TOKEN }}
-          REGISTRY_GITHUB_TOKEN: ${{ secrets.REGISTRY_GITHUB_TOKEN }}
-
-      - name: TestInstallSpigotMC
-        run: go test -v -timeout 5m ./... -run ^TestInstallSpigotMC$
+      - name: Run e2e tests
+        run: go test -v -timeout 20m ./...
         env:
           SKPM_GITHUB_TOKEN: ${{ secrets.SKPM_GITHUB_TOKEN }}
           REGISTRY_GITHUB_TOKEN: ${{ secrets.REGISTRY_GITHUB_TOKEN }}
           SKPM_TEST_SPIGOT_RESOURCE: ${{ secrets.SKPM_TEST_SPIGOT_RESOURCE }}
-
-      - name: TestPublish
-        run: go test -v -timeout 10m ./... -run ^TestPublish$
-        env:
-          SKPM_GITHUB_TOKEN: ${{ secrets.SKPM_GITHUB_TOKEN }}
-          REGISTRY_GITHUB_TOKEN: ${{ secrets.REGISTRY_GITHUB_TOKEN }}
