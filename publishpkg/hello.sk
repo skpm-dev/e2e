@@ -1,0 +1,2 @@
+on load:
+    log "[e2e-publish-test] loaded"

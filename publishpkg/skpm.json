@@ -1,0 +1,10 @@
+{
+  "name": "e2e-publish-test",
+  "description": "Dedicated package for skpm publish end-to-end tests",
+  "author": "skpm-dev",
+  "version": "1.0.0",
+  "skript": ">=2.7",
+  "minecraft": ">=1.21",
+  "addons": {},
+  "files": ["hello.sk"]
+}
