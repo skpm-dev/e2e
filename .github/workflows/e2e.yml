@@ -17,13 +17,13 @@ jobs:
         with:
           repository: skpm-dev/cli
           token: ${{ secrets.REGISTRY_GITHUB_TOKEN }}
-          path: ../cli
+          path: cli-src
 
       - uses: actions/checkout@v4
         with:
           repository: skpm-dev/registry
           token: ${{ secrets.REGISTRY_GITHUB_TOKEN }}
-          path: ../registry
+          path: registry-src
 
       - uses: actions/setup-go@v5
         with:
@@ -55,3 +55,5 @@ jobs:
           SKPM_GITHUB_TOKEN: ${{ secrets.SKPM_GITHUB_TOKEN }}
           REGISTRY_GITHUB_TOKEN: ${{ secrets.REGISTRY_GITHUB_TOKEN }}
           SKPM_TEST_SPIGOT_RESOURCE: ${{ secrets.SKPM_TEST_SPIGOT_RESOURCE }}
+          CLI_SRC_DIR: ${{ github.workspace }}/cli-src
+          REGISTRY_SRC_DIR: ${{ github.workspace }}/registry-src

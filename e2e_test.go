@@ -851,7 +851,11 @@ func TestPublish(t *testing.T) {
 	}
 
 	registryURL := startLocalRegistry(t) // also skips if REGISTRY_GITHUB_TOKEN missing
-	cliBin := buildBinary(t, "../cli", "skpm")
+	cliSrcDir := os.Getenv("CLI_SRC_DIR")
+	if cliSrcDir == "" {
+		cliSrcDir = "../cli"
+	}
+	cliBin := buildBinary(t, cliSrcDir, "skpm")
 
 	// Copy the publishpkg fixture to a temp dir and set a unique version.
 	pkgDir := t.TempDir()
@@ -986,7 +990,11 @@ func startLocalRegistry(t *testing.T) string {
 		t.Skip("REGISTRY_GITHUB_TOKEN not set — skipping publish test")
 	}
 
-	bin := buildBinary(t, "../registry", "skpm-registry")
+	registrySrcDir := os.Getenv("REGISTRY_SRC_DIR")
+	if registrySrcDir == "" {
+		registrySrcDir = "../registry"
+	}
+	bin := buildBinary(t, registrySrcDir, "skpm-registry")
 
 	// Pick a free port.
 	ln, err := net.Listen("tcp", "localhost:0")
